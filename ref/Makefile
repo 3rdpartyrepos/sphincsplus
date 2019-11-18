@@ -1,5 +1,11 @@
-CC = /usr/bin/gcc
-CFLAGS = -Wall -Wextra -Wpedantic -O3 -std=c99
+CC = gcc
+CFLAGS = -Wall -Wextra -Wpedantic -O3 -std=c11
+
+ifeq ($(OS), Windows_NT)
+	ADDITIONAL_FLAGS=-lbcrypt
+else
+	ADDITIONAL_FLAGS=
+endif
 
 HASH = shake256
 THASH = robust
@@ -44,13 +50,13 @@ benchmarks: $(BENCHMARK)
 benchmark: $(BENCHMARK:=.exec)
 
 PQCgenKAT_sign: PQCgenKAT_sign.c $(DET_SOURCES) $(DET_HEADERS)
-	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< -lcrypto
+	$(CC) $(CFLAGS) -o $@ $(DET_SOURCES) $< $(ADDITIONAL_FLAGS)
 
 test/%: test/%.c $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS) $(ADDITIONAL_FLAGS)
 
 test/haraka: test/haraka.c $(filter-out haraka.c,$(SOURCES)) $(HEADERS)
-	$(CC) $(CFLAGS) -o $@ $(filter-out haraka.c,$(SOURCES)) $< $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(filter-out haraka.c,$(SOURCES)) $< $(LDLIBS) $(ADDITIONAL_FLAGS)
 
 test/%.exec: test/%
 	@$<
