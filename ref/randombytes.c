@@ -2,6 +2,7 @@
 This code was taken from the SPHINCS reference implementation and is public domain.
 */
 
+#ifndef _WIN32
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -39,3 +40,21 @@ void randombytes(unsigned char *x, unsigned long long xlen)
         xlen -= i;
     }
 }
+#else
+
+#define WIN32_NO_STATUS
+#include <windows.h>
+#undef WIN32_NO_STATUS
+
+#include <winternl.h>
+#include <ntstatus.h>
+#include <winerror.h>
+#include <bcrypt.h>
+#include <sal.h>
+
+void randombytes(unsigned char *x, unsigned long long xlen) {
+	if (!NT_SUCCESS(BCryptGenRandom(NULL,x,xlen,BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {
+		exit(-1);
+	}
+}
+#endif
