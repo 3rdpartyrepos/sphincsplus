@@ -1,5 +1,9 @@
 #define _POSIX_C_SOURCE 199309L
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -85,6 +89,7 @@ static void display_result(double result, unsigned long long *l, size_t llen, un
     printf(" cycles\n");
 }
 
+#ifndef _WIN32
 #define MEASURE(TEXT, MUL, FNCALL)\
     printf(TEXT);\
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);\
@@ -96,6 +101,34 @@ static void display_result(double result, unsigned long long *l, size_t llen, un
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &stop);\
     result = (stop.tv_sec - start.tv_sec) * 1e6 + (stop.tv_nsec - start.tv_nsec) / 1e3;\
     display_result(result, t, NTESTS, MUL);
+#else
+
+double RealElapsedTime(void) { // granularity about 50 microsecs on my machine
+   static LARGE_INTEGER freq, start;
+   LARGE_INTEGER count;
+   if (!QueryPerformanceCounter(&count))
+      perror("QueryPerformanceCounter");
+   if (!freq.QuadPart) { // one time initialization
+      if (!QueryPerformanceFrequency(&freq))
+         perror("QueryPerformanceFrequency");
+      start = count;
+   }
+   return (double)(count.QuadPart - start.QuadPart) / freq.QuadPart;
+}
+
+#define MEASURE(TEXT, MUL, FNCALL)\
+    printf(TEXT);\
+    start = RealElapsedTime();\
+    for(i = 0; i < NTESTS; i++) {\
+        t[i] = cpucycles();\
+        FNCALL;\
+    }\
+    t[NTESTS] = cpucycles();\
+    stop = RealElapsedTime();\
+    result = (stop - start) * 1e6;\
+    display_result(result, t, NTESTS, MUL);
+#endif
+
 
 int main()
 {
@@ -120,7 +153,11 @@ int main()
     unsigned long long smlen;
     unsigned long long mlen;
     unsigned long long t[NTESTS+1];
+#ifndef _WIN32
     struct timespec start, stop;
+#else
+    double start, stop;
+#endif
     double result;
     int i;
 
